@@ -20,6 +20,7 @@ function App() {
     const fetchMe = async () => {
       try {
         const res = await axios.get(ServerUrl + "/api/user/current-user", { withCredentials: true })
+        console.log("Current User:", res.data);
         setUser(res.data)
         setLoading(false)
       } catch (error) {

@@ -1,35 +1,31 @@
 (function () {
+  // userData
 
+  const script = document.currentScript;
 
-    // userData
+  const userId = script?.dataset?.userId;
 
-    const script = document.currentScript;
+  const theme = "dark";
 
-    const userId = script?.dataset?.userId
+  let assistantConfig = null;
 
-    const theme = "dark"
+  // load CSS
 
-    let assistantConfig = null
+  const link = document.createElement("link");
 
+  link.rel = "stylesheet";
 
-    // load CSS
+  link.href = "http://localhost:5173/assistant.css";
 
-    const link = document.createElement("link")
+  document.head.appendChild(link);
 
-    link.rel = "stylesheet"
+  // Create PopUp
 
-    link.href = "http://localhost:5173/assistant.css"
+  const popup = document.createElement("div");
 
-    document.head.appendChild(link)
+  popup.className = `shifra-popup theme-${theme}`;
 
-
-    // Create PopUp
-
-    const popup = document.createElement("div")
-
-    popup.className = `shifra-popup theme-${theme}`
-
-    popup.innerHTML = `
+  popup.innerHTML = `
     <div class="shifra-overlay"></div>
 
     <div class="shifra-content">
@@ -92,256 +88,238 @@
     
     `;
 
-    document.body.appendChild(popup);
+  document.body.appendChild(popup);
 
-    // floating Button
+  // floating Button
 
-    const button = document.createElement("button")
+  const button = document.createElement("button");
 
-    button.className = `shifra-btn theme-${theme}`
+  button.className = `shifra-btn theme-${theme}`;
 
-    button.innerHTML = `
+  button.innerHTML = `
     <img 
     src="http://localhost:5173/logo.png"
     alt="logo"
     />`;
-    document.body.appendChild(button)
+  document.body.appendChild(button);
 
+  // toggle popup
 
+  let open = false;
 
+  button.onclick = () => {
+    open = !open;
+    popup.style.display = open ? "flex" : "none";
+  };
 
-    // toggle popup
+  // load Assistant
 
-    let open = false
+  const loadAssistant = async () => {
+    try {
+      console.log("Widget UserId:", userId);
+      const res = await fetch(
+        `http://localhost:8000/api/assistant/config/${userId}`,
+      );
 
-    button.onclick = () => {
-        open = !open;
-        popup.style.display = open ? "flex" : "none";
+      const data = await res.json();
+
+      if (data) {
+        assistantConfig = data.user;
+        applyConfig();
+      }
+    } catch (error) {
+      console.log("Assistant Load Error:", error);
     }
+  };
 
+  const applyConfig = () => {
+    if (!assistantConfig) return;
 
-    // load Assistant
+    popup.className = `shifra-popup theme-${assistantConfig.theme}`;
 
-    const loadAssistant = async () => {
-        try {
-            const res = await fetch(`http://localhost:8000/api/assistant/config/${userId}`)
+    button.className = `shifra-btn theme-${assistantConfig.theme}`;
 
-            const data = await res.json()
+    const title = popup.querySelector(".shifra-title");
 
-            if (data) {
-                assistantConfig = data.user
-                applyConfig()
-            }
+    title.innerHTML = `Hello! I'm ${assistantConfig.assistantName}`;
 
-        } catch (error) {
-            console.log(
-                "Assistant Load Error:",
-                error
-            );
-        }
-    }
-
-
-    const applyConfig = () => {
-        if (!assistantConfig) return;
-
-        popup.className = `shifra-popup theme-${assistantConfig.theme}`
-
-        button.className = `shifra-btn theme-${assistantConfig.theme}`
-
-        const title = popup.querySelector(".shifra-title")
-
-        title.innerHTML = `Hello! I'm ${assistantConfig.assistantName}`;
-
-        const subTitle = popup.querySelector(".shifra-sub")
-        subTitle.innerHTML = `
+    const subTitle = popup.querySelector(".shifra-sub");
+    subTitle.innerHTML = `
     Welcome to
     ${assistantConfig.businessName}.
     <br />
     Ask anything about your website.
   `;
+  };
 
+  loadAssistant();
 
-    }
+  // Element
 
-    loadAssistant()
+  const status = popup.querySelector(".shifra-status");
 
+  const wave = popup.querySelector(".shifra-wave");
 
-    // Element
+  const userText = popup.querySelector(".shifra-user-text");
 
+  const aiText = popup.querySelector(".shifra-ai-text");
 
-    const status =
-        popup.querySelector(
-            ".shifra-status"
-        );
+  const mic = popup.querySelector(".shifra-mic");
 
-    const wave =
-        popup.querySelector(
-            ".shifra-wave"
-        );
+  // text-speech
 
-    const userText =
-        popup.querySelector(
-            ".shifra-user-text"
-        );
+  const speak = (text) => {
+    window.speechSynthesis.cancel();
 
-    const aiText =
-        popup.querySelector(
-            ".shifra-ai-text"
-        );
+    // Show AI response
+    aiText.innerText = text;
 
-    const mic =
-        popup.querySelector(
-            ".shifra-mic"
-        );
+    status.innerText = "AI Speaking...";
 
+    const speech = new SpeechSynthesisUtterance(text);
 
+    speech.lang = "hi-IN";
 
-    // text-speech
+    speech.rate = 1;
 
-    const speak = (text) => {
-        window.speechSynthesis.cancel();
+    speech.pitch = 1;
 
-        // Show AI response
-        aiText.innerText =
-            text;
+    speech.volume = 1;
 
-        status.innerText =
-            "AI Speaking...";
+    // Voice end
+    speech.onend = () => {
+      status.innerText = "Tap button to Speak";
 
-        const speech = new SpeechSynthesisUtterance(text)
+      wave.style.opacity = "0";
+    };
 
-        speech.lang =
-            "hi-IN";
+    // Start speaking
+    window.speechSynthesis.speak(speech);
+  };
 
-        speech.rate = 1;
+  const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
 
-        speech.pitch = 1;
+  if (SpeechRecognition) {
+    const recognition = new SpeechRecognition();
 
-        speech.volume = 1;
+    recognition.lang = "en-US";
 
-        // Voice end
-        speech.onend = () => {
+    recognition.continuous = false;
 
-            status.innerText =
-                "Tap button to Speak";
+    recognition.interimResults = false;
 
-            wave.style.opacity =
-                "0";
-        };
+    // mic.onclick = () => {
+    //   console.log("Mic clicked");
+      
+    //   wave.style.opacity = "1";
 
-        // Start speaking
-        window.speechSynthesis.speak(
-            speech
-        );
-    }
+    //   status.innerText = "Listening...";
 
+    //   userText.innerText = "";
 
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+    //   aiText.innerText = "";
+       
+    //   recognition.start();
+    // };
+    mic.onclick = async () => {
+  console.log("Mic clicked");
 
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: true,
+    });
 
-    if(SpeechRecognition){
+    console.log("Microphone permission granted");
 
-        const recognition = new SpeechRecognition();
+    stream.getTracks().forEach(track => track.stop());
 
-        recognition.lang =
-      "en-US";
+    wave.style.opacity = "1";
+    status.innerText = "Listening...";
 
-    recognition.continuous =
-      false;
+    userText.innerText = "";
+    aiText.innerText = "";
 
-    recognition.interimResults =
-      false;
+    recognition.start();
 
+  } catch (error) {
+    console.error("Microphone permission error:", error);
+    status.innerText = "Microphone access denied";
+    wave.style.opacity = "0";
+  }
+};
 
-      mic.onclick=()=>{
-        wave.style.opacity =
-        "1";
+    recognition.onresult = (e) => {
+      const text = e.results[0][0].transcript;
+      console.log("Recognized:", text);
+      userText.innerText = "You: " + text;
 
-      status.innerText =
-        "Listening...";
+      recognition.stop();
 
-      userText.innerText =
-        "";
+      setTimeout(async () => {
+        try {
+          status.innerText = "Thinking...";
 
-      aiText.innerText =
-        "";
+          const res = await fetch("http://localhost:8000/api/assistant/ask", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              message: text,
+              userId,
+            }),
+          });
+          console.log("Status:", res.status);
+          const data = await res.json();
+          console.log(data);
 
-      recognition.start();
-      }
+          if (data.success) {
+            if (data.action === "navigate") {
+              speak(data.response);
 
-
-      recognition.onresult = (e)=>{
-        const text = e.results[0][0].transcript
-
-        userText.innerText = "You: " + text;
-
-        recognition.stop();
-
-
-        setTimeout( async () => {
-            try {
-                status.innerText = "Thinking...";
-                
-
-                const res = await fetch("http://localhost:8000/api/assistant/ask" , {
-                    method:"POST",
-                    headers:{
-                        "Content-Type":
-                      "application/json",
-                    } ,
-                    body:JSON.stringify({
-                        message:text,
-                        userId
-                    })
-                })
-
-                const data = await res.json()
-                console.log(data)
-
-                if(data.success){
-
-                    if(data.action === "navigate"){
-                        speak(data.response)
-
-                        setTimeout(()=>{
-                            window.location.href = data.path
-
-                        },1500)
-
-                    }else{
-                        speak(data.aiResponse)
-                    }
-
-                }else{
-                    speak("Response Error please Check your plan")
-
-                }
-
-
-
-            } catch (error) {
-                console.log(error)
-                speak("AI Server Error")
-                
+              setTimeout(() => {
+                window.location.href = data.path;
+              }, 1500);
+            } else {
+              speak(data.aiResponse);
             }
-        },600)
-      };
+          } else {
+            speak("Response Error please Check your plan");
+          }
+        } catch (error) {
+          console.log(error);
+          speak("AI Server Error");
+        }
+      }, 600);
+    };
+    recognition.onstart = () => {
+      console.log("Recognition started");
+    };
 
-      recognition.onerror = ()=>{
-        status.innerText =
-          "Tap button to Speak";
+    recognition.onend = () => {
+      console.log("Recognition ended");
+    };
+    recognition.onspeechstart = () => {
+    console.log("Speech started");
+};
 
-        wave.style.opacity =
-          "0";
-      }
+recognition.onspeechend = () => {
+    console.log("Speech ended");
+};
+
+recognition.onnomatch = () => {
+    console.log("No match");
+};
 
 
-    }
-    else{
-        status.innerText =
-      "Speech Recognition not supported";
-    }
+    recognition.onerror = (e) => {
+        console.log("Recognition error:", e.error, e);
+      status.innerText = "Tap button to Speak";
 
-
+      wave.style.opacity = "0";
+    };
+  } else {
+    status.innerText = "Speech Recognition not supported";
+  }
 })();
