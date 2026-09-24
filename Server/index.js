@@ -15,6 +15,7 @@ app.set("trust proxy", 1)
 
 const allowedOrigins = [
   "http://localhost:5173",
+  "https://ai-voice-assistant-weld.vercel.app",
   process.env.CLIENT_URL,
 ].filter(Boolean)
 

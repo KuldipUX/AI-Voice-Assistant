@@ -5,17 +5,17 @@
   const customServerUrl = script?.dataset?.serverUrl;
 
   // Determine base URLs dynamically from script source
-  let clientBaseUrl = "http://localhost:5173";
+  let clientBaseUrl = "https://ai-voice-assistant-weld.vercel.app";
   try {
     if (script?.src) {
       const parsedUrl = new URL(script.src);
       clientBaseUrl = parsedUrl.origin;
     }
   } catch (e) {
-    console.warn("ShifraAI: Unable to parse script origin, defaulting to localhost");
+    console.warn("ShifraAI: Unable to parse script origin, defaulting to production URL");
   }
 
-  let serverBaseUrl = customServerUrl || (clientBaseUrl.includes("localhost") ? "http://localhost:8000" : clientBaseUrl);
+  let serverBaseUrl = customServerUrl || (clientBaseUrl.includes("localhost") ? "http://localhost:8000" : "https://ai-voice-assistant-pu5k.onrender.com");
 
   // Inject Google Fonts for Space Grotesk & Plus Jakarta Sans
   if (!document.getElementById("shifra-google-fonts")) {

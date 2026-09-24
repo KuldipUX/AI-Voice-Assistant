@@ -9,8 +9,8 @@ import Builder from './pages/Builder'
 import Billing from './pages/Billing'
 import { Toaster } from "react-hot-toast"
 
-export const ServerUrl = import.meta.env.VITE_SERVER_URL || "http://localhost:8000"
-export const CLIENT_URL = import.meta.env.VITE_CLIENT_URL || (typeof window !== "undefined" ? window.location.origin : "http://localhost:5173")
+export const ServerUrl = import.meta.env.VITE_SERVER_URL || "https://ai-voice-assistant-pu5k.onrender.com"
+export const CLIENT_URL = import.meta.env.VITE_CLIENT_URL || (typeof window !== "undefined" ? window.location.origin : "https://ai-voice-assistant-weld.vercel.app")
 
 function App() {
   const [user, setUser] = useState(null)
