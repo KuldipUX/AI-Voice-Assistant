@@ -111,6 +111,16 @@
           />
         </button>
         <span class="shifra-mic-hint">Tap to Speak</span>
+
+        <form class="shifra-input-row">
+          <input 
+            type="text" 
+            class="shifra-input" 
+            placeholder="Or type a question or command..." 
+            autocomplete="off"
+          />
+          <button type="submit" class="shifra-send-btn" title="Send message">➤</button>
+        </form>
       </div>
     </div>
   `;
@@ -258,27 +268,92 @@
     window.speechSynthesis.speak(speech);
   };
 
+  // Central Query Processing (Speech & Text)
+  const processUserQuery = async (queryText) => {
+    if (!queryText || !queryText.trim()) return;
+    const cleanText = queryText.trim();
+
+    if (userText) {
+      userText.style.display = "block";
+      userText.innerText = "You: " + cleanText;
+      userText.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    try {
+      updateStatus("Thinking...", false);
+
+      const res = await fetch(`${serverBaseUrl}/api/assistant/ask`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message: cleanText,
+          userId,
+          currentPath: window.location.pathname,
+        }),
+      });
+
+      const data = await res.json();
+      console.log("ZyraAI Response:", data);
+
+      if (data.success) {
+        if (data.action === "navigate") {
+          speak(data.response);
+          setTimeout(() => {
+            window.location.href = data.path;
+          }, 1500);
+        } else {
+          speak(data.aiResponse);
+        }
+      } else {
+        speak(data.message || "Response Error, please check your plan");
+      }
+    } catch (error) {
+      console.log("ZyraAI Query Error:", error);
+      speak("AI Server Error");
+    }
+  };
+
+  // Text Input Submission
+  const inputForm = popup.querySelector(".shifra-input-row");
+  const inputField = popup.querySelector(".shifra-input");
+  if (inputForm) {
+    inputForm.onsubmit = (e) => {
+      e.preventDefault();
+      if (inputField && inputField.value.trim()) {
+        const val = inputField.value.trim();
+        inputField.value = "";
+        processUserQuery(val);
+      }
+    };
+  }
+
   // Speech Recognition
   const SpeechRecognition =
     window.SpeechRecognition || window.webkitSpeechRecognition;
 
   if (SpeechRecognition) {
     const recognition = new SpeechRecognition();
-    recognition.lang = "en-US";
+    recognition.lang = navigator.language || "en-US";
     recognition.continuous = false;
     recognition.interimResults = false;
 
-    mic.onclick = async () => {
+    let isListening = false;
+
+    mic.onclick = () => {
       console.log("ZyraAI: Mic clicked");
 
+      if (isListening) {
+        try {
+          recognition.stop();
+        } catch (e) {}
+        isListening = false;
+        updateStatus("Tap button to Speak", false);
+        return;
+      }
+
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: true,
-        });
-
-        console.log("ZyraAI: Microphone permission granted");
-        stream.getTracks().forEach((track) => track.stop());
-
         updateStatus("Listening...", true);
 
         if (userText) {
@@ -291,75 +366,56 @@
         }
 
         recognition.start();
+        isListening = true;
       } catch (error) {
-        console.error("ZyraAI: Microphone permission error:", error);
-        updateStatus("Mic access denied", false);
+        console.error("ZyraAI: Speech start error:", error);
+        isListening = false;
+        if (error.name === "InvalidStateError") {
+          try { recognition.stop(); } catch (e) {}
+        }
+        updateStatus("Tap button to Speak", false);
       }
     };
 
     recognition.onresult = (e) => {
       const text = e.results[0][0].transcript;
       console.log("ZyraAI Recognized:", text);
-
-      if (userText) {
-        userText.style.display = "block";
-        userText.innerText = "You: " + text;
-        userText.scrollIntoView({ behavior: "smooth", block: "nearest" });
-      }
-
-      recognition.stop();
-
-      setTimeout(async () => {
-        try {
-          updateStatus("Thinking...", false);
-
-          const res = await fetch(`${serverBaseUrl}/api/assistant/ask`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              message: text,
-              userId,
-              currentPath: window.location.pathname,
-            }),
-          });
-
-          const data = await res.json();
-          console.log("ZyraAI Response:", data);
-
-          if (data.success) {
-            if (data.action === "navigate") {
-              speak(data.response);
-              setTimeout(() => {
-                window.location.href = data.path;
-              }, 1500);
-            } else {
-              speak(data.aiResponse);
-            }
-          } else {
-            speak(data.message || "Response Error, please check your plan");
-          }
-        } catch (error) {
-          console.log("ZyraAI Query Error:", error);
-          speak("AI Server Error");
-        }
-      }, 600);
+      isListening = false;
+      try { recognition.stop(); } catch (err) {}
+      processUserQuery(text);
     };
 
     recognition.onstart = () => {
       console.log("ZyraAI: Recognition started");
+      isListening = true;
+      updateStatus("Listening...", true);
     };
 
     recognition.onend = () => {
       console.log("ZyraAI: Recognition ended");
+      isListening = false;
+      if (statusLabel && statusLabel.innerText === "Listening...") {
+        updateStatus("Tap button to Speak", false);
+      }
     };
 
     recognition.onerror = (e) => {
       console.log("ZyraAI Recognition error:", e.error, e);
-      updateStatus("Tap button to Speak", false);
+      isListening = false;
+      if (e.error === "network") {
+        updateStatus("Speech offline. Type below!", false);
+      } else if (e.error === "not-allowed") {
+        updateStatus("Mic permission denied", false);
+      } else if (e.error === "no-speech") {
+        updateStatus("No speech heard. Try again", false);
+      } else {
+        updateStatus("Tap button to Speak", false);
+      }
     };
   } else {
-    updateStatus("Speech not supported", false);
+    updateStatus("Voice not supported. Type below!", false);
+    mic.onclick = () => {
+      if (inputField) inputField.focus();
+    };
   }
 })();

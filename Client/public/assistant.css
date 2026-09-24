@@ -472,6 +472,59 @@
   letter-spacing: 0.05em;
 }
 
+.shifra-input-row {
+  display: flex;
+  width: 100%;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.shifra-input {
+  flex: 1;
+  padding: 8px 14px;
+  border: 2px solid #000000 !important;
+  border-radius: 999px !important;
+  box-shadow: 2.5px 2.5px 0px #000000 !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  outline: none;
+  background: #FFFFFF !important;
+  color: #000000 !important;
+}
+
+.shifra-input:focus {
+  border-color: #000000 !important;
+  box-shadow: 3.5px 3.5px 0px #000000 !important;
+}
+
+.shifra-send-btn {
+  width: 34px;
+  height: 34px;
+  border: 2px solid #000000 !important;
+  border-radius: 999px !important;
+  background: #DBFF43 !important;
+  color: #000000 !important;
+  box-shadow: 2px 2px 0px #000000 !important;
+  font-size: 13px !important;
+  font-weight: 900 !important;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.shifra-send-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0px #000000 !important;
+}
+
+.shifra-send-btn:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0px #000000 !important;
+}
+
 /* ==========================================================================
    THEMES (NEO-BRUTALIST COLORWAYS)
    ========================================================================== */
