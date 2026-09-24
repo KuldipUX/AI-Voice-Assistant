@@ -1,8 +1,11 @@
 import { initializeApp } from "firebase/app";
 import {getAuth, GoogleAuthProvider} from "firebase/auth"
 
+const rawApiKey = import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyCAzG3_Ddg_EY1CpROmzHbRnPZiOGTOaBo";
+const apiKey = typeof rawApiKey === "string" ? rawApiKey.replace(/["',;\s]/g, "") : rawApiKey;
+
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  apiKey: apiKey,
   authDomain: "zyraai-a2482.firebaseapp.com",
   projectId: "zyraai-a2482",
   storageBucket: "zyraai-a2482.firebasestorage.app",

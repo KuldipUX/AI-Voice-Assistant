@@ -24,7 +24,7 @@ function App() {
         setUser(res.data)
         setLoading(false)
       } catch (error) {
-        console.log(error)
+        setUser(null)
         setLoading(false)
       }
     }
