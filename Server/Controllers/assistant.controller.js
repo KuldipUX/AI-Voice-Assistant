@@ -171,13 +171,12 @@ ${message}
 
     } catch (error) {
 
-        console.log(error)
+        console.error("askAssistant error:", error);
 
-        return  res.status(500).json({
-                success: false,
-                message:
-                    "Assistant AI Error",
-            });
+        return res.status(500).json({
+            success: false,
+            message: error.message || "Assistant AI Error",
+        });
 
     }
 }

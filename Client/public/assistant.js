@@ -1,266 +1,319 @@
 (function () {
-  // userData
-
+  // Current script & userId
   const script = document.currentScript;
-
   const userId = script?.dataset?.userId;
+  const customServerUrl = script?.dataset?.serverUrl;
 
-  const theme = "dark";
+  // Determine base URLs dynamically from script source
+  let clientBaseUrl = "http://localhost:5173";
+  try {
+    if (script?.src) {
+      const parsedUrl = new URL(script.src);
+      clientBaseUrl = parsedUrl.origin;
+    }
+  } catch (e) {
+    console.warn("ShifraAI: Unable to parse script origin, defaulting to localhost");
+  }
 
-  let assistantConfig = null;
+  let serverBaseUrl = customServerUrl || (clientBaseUrl.includes("localhost") ? "http://localhost:8000" : clientBaseUrl);
 
-  // load CSS
+  // Inject Google Fonts for Space Grotesk & Plus Jakarta Sans
+  if (!document.getElementById("shifra-google-fonts")) {
+    const preconnect1 = document.createElement("link");
+    preconnect1.rel = "preconnect";
+    preconnect1.href = "https://fonts.googleapis.com";
+    document.head.appendChild(preconnect1);
 
+    const preconnect2 = document.createElement("link");
+    preconnect2.rel = "preconnect";
+    preconnect2.crossOrigin = "anonymous";
+    preconnect2.href = "https://fonts.gstatic.com";
+    document.head.appendChild(preconnect2);
+
+    const fontStyle = document.createElement("link");
+    fontStyle.id = "shifra-google-fonts";
+    fontStyle.rel = "stylesheet";
+    fontStyle.href =
+      "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Space+Grotesk:wght@600;700;800;900&display=swap";
+    document.head.appendChild(fontStyle);
+  }
+
+  // Inject assistant.css
   const link = document.createElement("link");
-
   link.rel = "stylesheet";
-
-  link.href = "http://localhost:5173/assistant.css";
-
+  link.href = `${clientBaseUrl}/assistant.css`;
   document.head.appendChild(link);
 
-  // Create PopUp
+  let theme = "light";
+  let assistantConfig = null;
 
+  // Create Neo-Brutalist Popup Container
   const popup = document.createElement("div");
-
   popup.className = `shifra-popup theme-${theme}`;
 
   popup.innerHTML = `
-    <div class="shifra-overlay"></div>
+    <!-- Retro Window Top Bar -->
+    <div class="shifra-window-bar">
+      <div class="shifra-header-badge">
+        <span class="shifra-dot"></span>
+        <span class="shifra-badge-label">AI Voice Agent</span>
+      </div>
+      <button class="shifra-close-btn" aria-label="Close" title="Close assistant">✕</button>
+    </div>
 
     <div class="shifra-content">
-
-       <div class="shifra-top">
-            <div class="shifra-orb-wrap">
-
-                <div class="shifra-orb-glow"></div>
-
-                <div class="shifra-orb"></div>
-
-            </div>
-
-            <h2 class="shifra-title">
-                Hello! I'm Shifra AI
-            </h2>
-
-            <p class="shifra-sub">
-                Your smart voice assistant.
-                <br />
-                Ask anything about your website.
-            </p>
-
-
-            <div class="shifra-status">
-                Tap button to Speak
-            </div>
-
-            <div class="shifra-wave">
-                <span></span>
-                <span></span>
-                <span></span>
-                <span></span>
-                <span></span>
-                <span></span>
-            </div>
-
-            <!-- User Text -->
-            <div class="shifra-user-text">
-            </div>
-
-            <!-- AI Text -->
-            <div class="shifra-ai-text">
-            </div>
-  
+      <div class="shifra-top">
+        <!-- Mascot / Visualizer Orb -->
+        <div class="shifra-orb-wrap">
+          <div class="shifra-orb">
+            <div class="shifra-orb-inner"></div>
+            <span class="shifra-orb-sparkle">✦</span>
+          </div>
         </div>
 
+        <h2 class="shifra-title">
+          Hello! I'm Zyra AI
+        </h2>
 
-        <div class="shifra-bottom">
-            
-            <button class="shifra-mic">
+        <p class="shifra-sub">
+          Your smart voice assistant.
+          <br />
+          Ask anything about this website.
+        </p>
 
-               <img 
-               src="http://localhost:5173/mic.svg"
-               alt="mic"
-               class="shifra-mic-icon"/>
-            </button>
+        <div class="shifra-status-pill">
+          <span class="shifra-status-dot">●</span>
+          <span class="shifra-status-label">Tap button to Speak</span>
         </div>
+
+        <div class="shifra-wave">
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+
+        <!-- Dialogue Transcript Box -->
+        <div class="shifra-dialogue-area">
+          <div class="shifra-user-text" style="display: none;"></div>
+          <div class="shifra-ai-text" style="display: none;"></div>
+        </div>
+      </div>
+
+      <div class="shifra-bottom">
+        <button class="shifra-mic" title="Tap to Speak">
+          <img 
+            src="${clientBaseUrl}/mic.svg"
+            alt="mic"
+            class="shifra-mic-icon"
+          />
+        </button>
+        <span class="shifra-mic-hint">Tap to Speak</span>
+      </div>
     </div>
-    
-    `;
+  `;
 
   document.body.appendChild(popup);
 
-  // floating Button
-
+  // Floating Neo-Brutalist Launcher Button
   const button = document.createElement("button");
-
   button.className = `shifra-btn theme-${theme}`;
+  button.title = "Open AI Voice Assistant";
 
   button.innerHTML = `
+    <div class="shifra-btn-badge">AI ✦</div>
     <img 
-    src="http://localhost:5173/logo.png"
-    alt="logo"
-    />`;
+      src="${clientBaseUrl}/logo.png"
+      alt="Zyra AI logo"
+    />
+  `;
+
   document.body.appendChild(button);
 
-  // toggle popup
-
+  // Toggle Popup
   let open = false;
 
-  button.onclick = () => {
-    open = !open;
+  const togglePopup = (forceState) => {
+    open = typeof forceState === "boolean" ? forceState : !open;
     popup.style.display = open ? "flex" : "none";
   };
 
-  // load Assistant
+  button.onclick = () => togglePopup();
 
+  // Close Button Handler
+  const closeBtn = popup.querySelector(".shifra-close-btn");
+  if (closeBtn) {
+    closeBtn.onclick = (e) => {
+      e.stopPropagation();
+      togglePopup(false);
+    };
+  }
+
+  // Load Assistant Config from Backend
   const loadAssistant = async () => {
     try {
-      console.log("Widget UserId:", userId);
-      const res = await fetch(
-        `http://localhost:8000/api/assistant/config/${userId}`,
-      );
-
+      if (!userId) {
+        console.warn("ZyraAI: data-user-id attribute is missing on script tag");
+        return;
+      }
+      console.log("ZyraAI Widget UserId:", userId);
+      const res = await fetch(`${serverBaseUrl}/api/assistant/config/${userId}`);
       const data = await res.json();
 
-      if (data) {
+      if (data && data.user) {
         assistantConfig = data.user;
         applyConfig();
       }
     } catch (error) {
-      console.log("Assistant Load Error:", error);
+      console.log("ZyraAI Load Error:", error);
     }
   };
 
   const applyConfig = () => {
     if (!assistantConfig) return;
 
-    popup.className = `shifra-popup theme-${assistantConfig.theme}`;
-
-    button.className = `shifra-btn theme-${assistantConfig.theme}`;
+    theme = assistantConfig.theme || "light";
+    popup.className = `shifra-popup theme-${theme}`;
+    button.className = `shifra-btn theme-${theme}`;
 
     const title = popup.querySelector(".shifra-title");
-
-    title.innerHTML = `Hello! I'm ${assistantConfig.assistantName}`;
+    if (title) {
+      title.innerHTML = `Hello! I'm ${assistantConfig.assistantName || "Zyra AI"}`;
+    }
 
     const subTitle = popup.querySelector(".shifra-sub");
-    subTitle.innerHTML = `
-    Welcome to
-    ${assistantConfig.businessName}.
-    <br />
-    Ask anything about your website.
-  `;
+    if (subTitle) {
+      subTitle.innerHTML = `
+        Welcome to ${assistantConfig.businessName || "our website"}.
+        <br />
+        Ask anything about your website.
+      `;
+    }
   };
 
   loadAssistant();
 
-  // Element
-
-  const status = popup.querySelector(".shifra-status");
-
+  // Widget Elements
+  const statusLabel = popup.querySelector(".shifra-status-label");
   const wave = popup.querySelector(".shifra-wave");
-
   const userText = popup.querySelector(".shifra-user-text");
-
   const aiText = popup.querySelector(".shifra-ai-text");
-
   const mic = popup.querySelector(".shifra-mic");
+  const micHint = popup.querySelector(".shifra-mic-hint");
 
-  // text-speech
+  const updateStatus = (text, isListening = false) => {
+    if (statusLabel) statusLabel.innerText = text;
+    if (micHint) micHint.innerText = text;
+    if (wave) {
+      if (isListening) {
+        wave.classList.add("active");
+      } else {
+        wave.classList.remove("active");
+      }
+    }
+  };
 
+  // Text-To-Speech Synthesis
   const speak = (text) => {
     window.speechSynthesis.cancel();
 
-    // Show AI response
-    aiText.innerText = text;
+    // Show AI Response Bubble
+    if (aiText) {
+      aiText.style.display = "block";
+      aiText.innerText = "AI: " + text;
+      aiText.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
 
-    status.innerText = "AI Speaking...";
+    updateStatus("AI Speaking...", true);
 
     const speech = new SpeechSynthesisUtterance(text);
-
     speech.lang = "hi-IN";
-
     speech.rate = 1;
-
     speech.pitch = 1;
-
     speech.volume = 1;
 
-    // Voice end
-    speech.onend = () => {
-      status.innerText = "Tap button to Speak";
+    // Female voice selection (restores original female voice functionality)
+    const voices = window.speechSynthesis.getVoices();
+    const femaleVoice = voices.find((v) =>
+      v.name.includes("Heera") ||
+      v.name.includes("Zira") ||
+      v.name.includes("Female") ||
+      v.name.includes("Google हिन्दी") ||
+      (v.lang && (v.lang.startsWith("hi") || v.lang === "en-IN"))
+    );
+    if (femaleVoice) {
+      speech.voice = femaleVoice;
+    }
 
-      wave.style.opacity = "0";
+    speech.onend = () => {
+      updateStatus("Tap button to Speak", false);
     };
 
-    // Start speaking
+    speech.onerror = () => {
+      updateStatus("Tap button to Speak", false);
+    };
+
     window.speechSynthesis.speak(speech);
   };
 
+  // Speech Recognition
   const SpeechRecognition =
     window.SpeechRecognition || window.webkitSpeechRecognition;
 
   if (SpeechRecognition) {
     const recognition = new SpeechRecognition();
-
     recognition.lang = "en-US";
-
     recognition.continuous = false;
-
     recognition.interimResults = false;
 
-    // mic.onclick = () => {
-    //   console.log("Mic clicked");
-      
-    //   wave.style.opacity = "1";
-
-    //   status.innerText = "Listening...";
-
-    //   userText.innerText = "";
-
-    //   aiText.innerText = "";
-       
-    //   recognition.start();
-    // };
     mic.onclick = async () => {
-  console.log("Mic clicked");
+      console.log("ZyraAI: Mic clicked");
 
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: true,
-    });
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+        });
 
-    console.log("Microphone permission granted");
+        console.log("ZyraAI: Microphone permission granted");
+        stream.getTracks().forEach((track) => track.stop());
 
-    stream.getTracks().forEach(track => track.stop());
+        updateStatus("Listening...", true);
 
-    wave.style.opacity = "1";
-    status.innerText = "Listening...";
+        if (userText) {
+          userText.innerText = "";
+          userText.style.display = "none";
+        }
+        if (aiText) {
+          aiText.innerText = "";
+          aiText.style.display = "none";
+        }
 
-    userText.innerText = "";
-    aiText.innerText = "";
-
-    recognition.start();
-
-  } catch (error) {
-    console.error("Microphone permission error:", error);
-    status.innerText = "Microphone access denied";
-    wave.style.opacity = "0";
-  }
-};
+        recognition.start();
+      } catch (error) {
+        console.error("ZyraAI: Microphone permission error:", error);
+        updateStatus("Mic access denied", false);
+      }
+    };
 
     recognition.onresult = (e) => {
       const text = e.results[0][0].transcript;
-      console.log("Recognized:", text);
-      userText.innerText = "You: " + text;
+      console.log("ZyraAI Recognized:", text);
+
+      if (userText) {
+        userText.style.display = "block";
+        userText.innerText = "You: " + text;
+        userText.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
 
       recognition.stop();
 
       setTimeout(async () => {
         try {
-          status.innerText = "Thinking...";
+          updateStatus("Thinking...", false);
 
-          const res = await fetch("http://localhost:8000/api/assistant/ask", {
+          const res = await fetch(`${serverBaseUrl}/api/assistant/ask`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -268,16 +321,16 @@
             body: JSON.stringify({
               message: text,
               userId,
+              currentPath: window.location.pathname,
             }),
           });
-          console.log("Status:", res.status);
+
           const data = await res.json();
-          console.log(data);
+          console.log("ZyraAI Response:", data);
 
           if (data.success) {
             if (data.action === "navigate") {
               speak(data.response);
-
               setTimeout(() => {
                 window.location.href = data.path;
               }, 1500);
@@ -285,41 +338,28 @@
               speak(data.aiResponse);
             }
           } else {
-            speak("Response Error please Check your plan");
+            speak(data.message || "Response Error, please check your plan");
           }
         } catch (error) {
-          console.log(error);
+          console.log("ZyraAI Query Error:", error);
           speak("AI Server Error");
         }
       }, 600);
     };
+
     recognition.onstart = () => {
-      console.log("Recognition started");
+      console.log("ZyraAI: Recognition started");
     };
 
     recognition.onend = () => {
-      console.log("Recognition ended");
+      console.log("ZyraAI: Recognition ended");
     };
-    recognition.onspeechstart = () => {
-    console.log("Speech started");
-};
-
-recognition.onspeechend = () => {
-    console.log("Speech ended");
-};
-
-recognition.onnomatch = () => {
-    console.log("No match");
-};
-
 
     recognition.onerror = (e) => {
-        console.log("Recognition error:", e.error, e);
-      status.innerText = "Tap button to Speak";
-
-      wave.style.opacity = "0";
+      console.log("ZyraAI Recognition error:", e.error, e);
+      updateStatus("Tap button to Speak", false);
     };
   } else {
-    status.innerText = "Speech Recognition not supported";
+    updateStatus("Speech not supported", false);
   }
 })();

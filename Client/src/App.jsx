@@ -8,15 +8,15 @@ import Navbar from './Components/Navbar'
 import Builder from './pages/Builder'
 import Billing from './pages/Billing'
 import { Toaster } from "react-hot-toast"
-export const ServerUrl = "http://localhost:8000"
-export const CLIENT_URL = "http://localhost:5173"
+
+export const ServerUrl = import.meta.env.VITE_SERVER_URL || "http://localhost:8000"
+export const CLIENT_URL = import.meta.env.VITE_CLIENT_URL || (typeof window !== "undefined" ? window.location.origin : "http://localhost:5173")
+
 function App() {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
 
-
   useEffect(() => {
-
     const fetchMe = async () => {
       try {
         const res = await axios.get(ServerUrl + "/api/user/current-user", { withCredentials: true })
@@ -29,33 +29,57 @@ function App() {
       }
     }
     fetchMe()
-
   }, [])
-
 
   return (
     <>
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          style: {
+            border: '2.5px solid #000000',
+            borderRadius: '16px',
+            boxShadow: '4px 4px 0px #000000',
+            fontFamily: 'Space Grotesk, sans-serif',
+            fontWeight: '700',
+            fontSize: '13px',
+            color: '#000000',
+            background: '#FFFFFF',
+            padding: '12px 18px',
+          },
+          success: {
+            iconTheme: {
+              primary: '#000000',
+              secondary: '#DBFF43',
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: '#000000',
+              secondary: '#FFAFE3',
+            },
+          },
+        }}
+      />
 
-    <Toaster position='top-right'/>
       <Routes>
+        <Route path="/login" element={<Login setUser={setUser} />} />
 
-        <Route path='/login' element={<Login setUser={setUser}/>} />
-
-        <Route path='/*' element={<ProtectedRoute user={user} loading={loading}>
-          <Navbar setUser={setUser} user={user}/>
-          <Routes>
-            <Route path='/' element={<Home user={user}/>} />
-            <Route path='/builder' element={<Builder user={user} setUser={setUser}/>}/>
-            <Route path='/billing' element={<Billing user={user} setUser={setUser}/>}/>
-
-            <Route path='*' element={<Navigate to="/" replace/>}/>
-          </Routes>
-
-
-        </ProtectedRoute>} />
-
+        <Route
+          path="/*"
+          element={
+            <ProtectedRoute user={user} loading={loading}>
+              <Navbar setUser={setUser} user={user} />
+              <Routes>
+                <Route path="/" element={<Home user={user} />} />
+                <Route path="/builder" element={<Builder user={user} setUser={setUser} />} />
+                <Route path="/billing" element={<Billing user={user} setUser={setUser} />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </ProtectedRoute>
+          }
+        />
       </Routes>
-
     </>
   )
 }
